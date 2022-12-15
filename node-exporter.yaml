@@ -15,6 +15,7 @@
       - thermal_zone
       - udp_queues
       - uname
+      - stat
   tasks:
     - name: download node exporter binary
       ansible.builtin.unarchive:
