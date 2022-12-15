@@ -58,7 +58,7 @@
         state: started
       become: true
 
-    - name: reload systemd daemon and restart victoria metrics if service changed
+    - name: reload systemd daemon and restart victoria metrics if service or config changed
       ansible.builtin.systemd:
         name: victoriametrics
         state: restarted
