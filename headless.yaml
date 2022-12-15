@@ -1,0 +1,19 @@
+---
+- hosts: rpi
+  gather_facts: false
+  tasks:
+    - name: ensure gpu memory is allocated with 16Mb
+      ansible.builtin.lineinfile:
+        path: /boot/config.txt
+        regexp: '^gpu_mem='
+        insertafter: '^\[all\]'
+        line: gpu_mem=16
+      register: gpu_mem
+      become: true
+
+    - name: reboot if gpu memory changed
+      ansible.builtin.reboot:
+        reboot_timeout: 300
+      when: gpu_mem.changed
+      become: true
+      
