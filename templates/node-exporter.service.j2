@@ -1,0 +1,19 @@
+[Unit]
+Description=Node Exporter for Prometheus metrics exporting for node
+Documentation=https://github.com/prometheus/node_exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/node_exporter --collector.disable-defaults {% for collector in collectors %}--collector.{{ collector }} {% endfor %}
+
+TimeoutSec=0
+RestartSec=2
+Restart=always
+
+StartLimitBurst=3
+StartLimitInterval=60s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,6 @@
+scrape_configs:
+  - job_name: 'raspberries'
+    static_configs:
+{% for host in groups['rpi'] %}
+      - targets: ['{{ hostvars[host]["ansible_facts"]["default_ipv4"]["address"] }}:9100']
+{% endfor %}

@@ -1,0 +1,67 @@
+---
+- hosts: victoriametrics
+  gather_facts: false
+  vars:
+    victoriametrics_vesion: 1.85.1
+  pre_tasks:
+    - setup:
+        filter: default_ipv4
+      delegate_to: '{{ item }}'
+      delegate_facts: true
+      loop: "{{ groups['rpi'] }}"
+  tasks:
+    - name: ensure data and config folder exists
+      ansible.builtin.file:
+        path: "{{ item }}"
+        owner: root
+        group: root
+        state: directory
+      with_items:
+        - /data/victoriametrics
+        - /etc/victoriametrics
+      become: true
+
+    - name: download victoria metrics binary
+      ansible.builtin.unarchive:
+        src: https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/v{{ victoriametrics_vesion }}/victoria-metrics-linux-arm-v{{ victoriametrics_vesion }}.tar.gz
+        dest: /usr/local/bin
+        owner: root
+        group: root
+        remote_src: true
+      register: download_binary
+      become: true
+
+    - name: ensure scape config
+      ansible.builtin.template:
+        src: prometheus.yaml.j2
+        dest: /etc/victoriametrics/prometheus.yaml
+        owner: root
+        group: root
+        mode: 0644
+      register: scrape_config
+      become: true
+
+    - name: ensure systemd service unit
+      ansible.builtin.template:
+        src: victoriametrics.service.j2
+        dest: /etc/systemd/system/victoriametrics.service
+        owner: root
+        group: root
+        mode: 0644
+      register: systemd_service
+      become: true
+
+    - name: ensure systemd service is enabled and started
+      ansible.builtin.systemd:
+        name: victoriametrics
+        enabled: true
+        state: started
+      become: true
+
+    - name: reload systemd daemon and restart victoria metrics if service changed
+      ansible.builtin.systemd:
+        name: victoriametrics
+        state: restarted
+        daemon_reload: true
+      when: scrape_config.changed or systemd_service.changed
+      become: true

@@ -1,0 +1,5 @@
+[victoriametrics]
+# host where victoria metrics will be provisioned here
+
+[rpi]
+# hosts which we want to monitor with victoria metrics
