@@ -1,0 +1,50 @@
+---
+- hosts: grafana
+  gather_facts: false
+  vars:
+    grafana_version: 9.3.1
+  tasks:
+    - name: ensure data and config folder exists
+      ansible.builtin.file:
+        path: "/opt/grafana"
+        owner: root
+        group: root
+        state: directory
+      become: true
+
+    - name: download grafana binary
+      ansible.builtin.unarchive:
+        src: https://dl.grafana.com/oss/release/grafana-{{ grafana_version }}.linux-armv6.tar.gz
+        dest: /opt/grafana
+        extra_opts:
+          - --strip-components=1
+        owner: root
+        group: root
+        remote_src: true
+      register: download_binary
+      become: true
+
+    - name: ensure systemd service unit
+      ansible.builtin.template:
+        src: grafana.service.j2
+        dest: /etc/systemd/system/grafana.service
+        owner: root
+        group: root
+        mode: 0644
+      register: systemd_service
+      become: true
+
+    - name: ensure systemd service is enabled and started
+      ansible.builtin.systemd:
+        name: grafana
+        enabled: true
+        state: started
+      become: true
+
+    - name: reload systemd daemon and restart grafana if service changed
+      ansible.builtin.systemd:
+        name: grafana
+        state: restarted
+        daemon_reload: true
+      when: systemd_service.changed
+      become: true
