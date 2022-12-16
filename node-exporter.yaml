@@ -16,6 +16,7 @@
       - udp_queues
       - uname
       - stat
+      - time
   tasks:
     - name: download node exporter binary
       ansible.builtin.unarchive:
