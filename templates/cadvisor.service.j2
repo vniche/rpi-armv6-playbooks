@@ -1,0 +1,20 @@
+[Unit]
+Description=cAdvisor container monitoring
+After=network-online.target docker.socket firewalld.service containerd.service
+Wants=network-online.target
+Requires=docker.socket containerd.service
+
+[Service]
+Type=simple
+PIDFile=/run/cadvidor/cadvidor.pid
+ExecStart=/usr/local/bin/cadvisor -logtostderr --docker_only --resctrl_interval=10s
+ExecReload=/bin/kill -s HUP $MAINPID
+TimeoutSec=0
+RestartSec=2
+Restart=always
+
+StartLimitBurst=3
+StartLimitInterval=60s
+
+[Install]
+WantedBy=multi-user.target
