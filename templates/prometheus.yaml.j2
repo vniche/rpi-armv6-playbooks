@@ -4,3 +4,9 @@ scrape_configs:
 {% for host in groups['rpi'] %}
       - targets: ['{{ hostvars[host]["ansible_facts"]["default_ipv4"]["address"] }}:9100']
 {% endfor %}
+  - job_name: 'cadvisor'
+    scrape_interval: 5s
+    static_configs:
+{% for host in groups['rpi'] %}
+      - targets: ['{{ hostvars[host]["ansible_facts"]["default_ipv4"]["address"] }}:8080']
+{% endfor %}
