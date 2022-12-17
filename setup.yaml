@@ -11,9 +11,19 @@
       register: gpu_mem
       become: true
 
+    - name: ensure cgroups is enabled
+      ansible.builtin.replace:
+        path: /boot/cmdline.txt
+        after: 'fsck.repair=yes'
+        before: 'rootwait'
+        regexp: '^(\s+)$'
+        replace: ' cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory '
+      register: cgroups
+      become: true
+
     - name: reboot if gpu memory changed
       ansible.builtin.reboot:
         reboot_timeout: 300
-      when: gpu_mem.changed
+      when: cgroups.changed or gpu_mem.changed
       become: true
       
