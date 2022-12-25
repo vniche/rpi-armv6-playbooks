@@ -1,0 +1,90 @@
+---
+- hosts: rpi
+  gather_facts: false
+  vars:
+    nebula_version: 1.6.1
+    lighthouses:
+      - internal_ip: 172.16.0.1
+        public_ip: 100.64.22.11
+    relays:
+      - 172.16.0.1
+    network_cidr: 172.16.0.0/24
+  pre_tasks:
+    - setup:
+        filter: default_ipv4
+      delegate_to: '{{ item }}'
+      delegate_facts: true
+      loop: "{{ groups['rpi'] }}"
+  tasks:
+    - name: ensure config folder exists
+      ansible.builtin.file:
+        path: /etc/nebula
+        owner: root
+        group: root
+        state: directory
+      become: true
+
+    - name: download nebula binary
+      ansible.builtin.unarchive:
+        src: https://github.com/slackhq/nebula/releases/download/v{{ nebula_version }}/nebula-linux-arm-6.tar.gz
+        dest: /usr/bin
+        include:
+          - nebula
+        owner: root
+        group: root
+        remote_src: true
+      register: download_binary
+      become: true
+
+    - name: ensure config
+      ansible.builtin.template:
+        src: nebula.yaml.j2
+        dest: /etc/nebula/config.yaml
+        owner: root
+        group: root
+        mode: 0644
+      register: config
+      become: true
+
+    - name: ensure certificates are copied
+      ansible.builtin.copy:
+        src: "{{ item.local }}"
+        dest: /etc/nebula/{{ item.remote }}
+        owner: root
+        group: root
+        mode: 0644
+      with_items:
+        - local: ca.crt
+          remote: ca.crt
+        - local: "{{ inventory_hostname }}.crt"
+          remote: host.crt
+        - local: "{{ inventory_hostname }}.key"
+          remote: host.key
+      register: certs
+      become: true
+
+
+    - name: ensure systemd service unit
+      ansible.builtin.template:
+        src: nebula.service.j2
+        dest: /etc/systemd/system/nebula.service
+        owner: root
+        group: root
+        mode: 0644
+      register: systemd_service
+      become: true
+
+    - name: ensure systemd service is enabled and started
+      ansible.builtin.systemd:
+        name: nebula
+        enabled: true
+        state: started
+      become: true
+
+    - name: reload systemd daemon and restart nebula if service or config changed
+      ansible.builtin.systemd:
+        name: nebula
+        state: restarted
+        daemon_reload: true
+      when: download_binary or certs.changed or config.changed or systemd_service.changed
+      become: true
